@@ -3,6 +3,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include <utility>
 using namespace std;
 #include "Matrix.h"
 
@@ -16,11 +17,11 @@ using namespace std;
 #endif    
 #endif
 
-class TicTacToe {
+class HEX {
 public:
 	enum Side { EMPTY, HUMAN, COMPUTER };
 	enum Value { HUMAN_WINS = -1, DRAW, COMPUTER_WINS, UNDECIDED };
-	TicTacToe()
+	HEX()
 #ifdef ANALYSE
 		: movesConsidered(0)
 #endif
@@ -35,7 +36,7 @@ public:
 	bool boardIsFull() const;
 	bool isAWin(Side s) const;
 	bool checkEdge(Side s) const;
-	bool checkPath(Side s, int x, int y, set<int, int> pos) const;
+	bool checkPath(Side s, int x, int y, set<pair<int, int>> pos) const;
 #ifdef ANALYSE
 	int getAndResetMovesConsidered() {
 		int i = movesConsidered;
@@ -48,8 +49,8 @@ private:
 	Board board;
 	Value value() const;
 
-	vector<pair<int, int>> location{ { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
-
+	vector<pair<int, int>> location{ (-1, 0) };
+//	vector<pair<int, int>> location{ make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
 #ifdef ANALYSE
 	int movesConsidered;
 #endif
@@ -62,7 +63,7 @@ public:
 private:
 	void printBoard() const;
 	void doComputerMove();
-	TicTacToe t;
+	HEX t;
 	char computerSymbol;
 	char humanSymbol;
 };
@@ -91,11 +92,11 @@ private:
 ostream& operator<<(ostream& o, const StopWatch& sw);
 #endif
 
-TicTacToe::Value TicTacToe::value() const {
+HEX::Value HEX::value() const {
 	return isAWin(COMPUTER) ? COMPUTER_WINS : isAWin(HUMAN) ? HUMAN_WINS : boardIsFull() ? DRAW : UNDECIDED;
 }
 
-TicTacToe::Value TicTacToe::chooseComputerMove(int& bestRow, int& bestColumn) {
+HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
@@ -121,7 +122,7 @@ TicTacToe::Value TicTacToe::chooseComputerMove(int& bestRow, int& bestColumn) {
 	return bestValue;
 }
 
-TicTacToe::Value TicTacToe::chooseHumanMove(int& bestRow, int& bestColumn) {
+HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
@@ -147,29 +148,29 @@ TicTacToe::Value TicTacToe::chooseHumanMove(int& bestRow, int& bestColumn) {
 	return bestValue;
 }
 
-TicTacToe::Side TicTacToe::side(int row, int column) const {
+HEX::Side HEX::side(int row, int column) const {
 	return board(row, column);
 }
 
-bool TicTacToe::isUndecided() const {
+bool HEX::isUndecided() const {
 	return value() == UNDECIDED;
 }
 
-bool TicTacToe::playMove(Side s, int row, int column) {
+bool HEX::playMove(Side s, int row, int column) {
 	if (row < 0 || row >= 3 || column < 0 || column >= 3 || board(row, column) != EMPTY)
 		return false;
 	board(row, column) = s;
 	return true;
 }
 
-bool TicTacToe::boardIsFull() const {
+bool HEX::boardIsFull() const {
 	return none_of(board.cbegin(), board.cend(), [](Side s) {
 		return s == EMPTY;
 	});
 }
 
-bool TicTacToe::isAWin(Side s) const {
-	set<int, int> pos;
+bool HEX::isAWin(Side s) const{
+	set<pair<int, int>> pos;
 	if (!checkEdge(s))
 	{
 		return false;
@@ -179,29 +180,30 @@ bool TicTacToe::isAWin(Side s) const {
 		return true;
 	}
 	return false;
-	//for (int i = 0; i < 3; ++i) {
-	//	if ((board(i, 0) == s && board(i, 1) == s && board(i, 2) == s) ||
-	//		(board(0, i) == s && board(1, i) == s && board(2, i) == s)) {
-	//		return true;
-	//	}
-	//}
-	//return (board(0, 0) == s && board(1, 1) == s && board(2, 2) == s) ||
-	//	(board(0, 2) == s && board(1, 1) == s && board(2, 0) == s);
 }
 
-bool TicTacToe::checkPath(Side s, int row, int column, set<int, int> pos) const
+bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> pos) const
 {
-	pos.insert(row,column);
-	for (int i = 0; i <= location.size(); i++)
+	if (s == HUMAN && row == 2)
 	{
-		if (board(row + location[i].first, column + location[i].second) == s)
+		return true;
+	}
+	else if (s == COMPUTER && column == 2)
+	{
+		return true;
+	}
+	pos.insert(make_pair(row, column));
+	for (int i = 0; i <= 2; i++)
+	{
+		if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
 		{
-			checkPath(s, row + location[i].first, column + location[i].second, pos);
+			return true;
 		}
 	}
+	return false;
 }
 
-bool TicTacToe::checkEdge(Side s) const {
+bool HEX::checkEdge(Side s) const {
 	bool side1 = false, side2 = false;
 	if (s = COMPUTER)
 	{
@@ -256,9 +258,9 @@ void ConsoleHEXGame::printBoard() const {
 		{
 			if (column != 0)
 			cout << "|";
-			if (t.side(row, column) == TicTacToe::COMPUTER)
+			if (t.side(row, column) == HEX::COMPUTER)
 				cout << computerSymbol;
-			else if (t.side(row, column) == TicTacToe::HUMAN)
+			else if (t.side(row, column) == HEX::HUMAN)
 				cout << humanSymbol;
 			else
 				cout << ' ';
@@ -281,7 +283,7 @@ void ConsoleHEXGame::doComputerMove() {
 	cout << "Moves considered: " << t.getAndResetMovesConsidered() << endl;
 #endif
 	cout << "Computer plays: ROW = " << bestRow << " COLUMN = " << bestColumn << endl;
-	t.playMove(TicTacToe::COMPUTER, bestRow, bestColumn);
+	t.playMove(HEX::COMPUTER, bestRow, bestColumn);
 }
 
 void ConsoleHEXGame::play() {
@@ -291,7 +293,7 @@ void ConsoleHEXGame::play() {
 			printBoard();
 			cout << endl << "Enter row and column (starts at 0): ";
 			cin >> row >> column;
-		} while (!t.playMove(TicTacToe::HUMAN, row, column));
+		} while (!t.playMove(HEX::HUMAN, row, column));
 		cout << endl;
 		if (t.isUndecided()) {
 			printBoard();
@@ -302,10 +304,10 @@ void ConsoleHEXGame::play() {
 //		system("cls");
 	} while (t.isUndecided());
 	printBoard();
-	if (t.isAWin(TicTacToe::COMPUTER)) {
+	if (t.isAWin(HEX::COMPUTER)) {
 		cout << "Computer wins!!" << endl;
 	}
-	else if (t.isAWin(TicTacToe::HUMAN)) {
+	else if (t.isAWin(HEX::HUMAN)) {
 		cout << "Human wins!!" << endl;
 	}
 	else {
