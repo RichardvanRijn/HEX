@@ -36,7 +36,7 @@ public:
 	bool boardIsFull() const;
 	bool isAWin(Side s) const;
 	bool checkEdge(Side s) const;
-	bool checkPath(Side s, int x, int y, set<pair<int, int>> pos) const;
+	bool checkPath(Side s, int x, int y, set<pair<int, int>> &pos) const;
 #ifdef ANALYSE
 	int getAndResetMovesConsidered() {
 		int i = movesConsidered;
@@ -49,8 +49,9 @@ private:
 	Board board;
 	Value value() const;
 
-	vector<pair<int, int>> location{ (-1, 0) };
-//	vector<pair<int, int>> location{ make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
+	vector<pair<int, int>> location{ { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
+	//	vector<pair<int, int>> location { make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
+//	vector<pair<int, int>> location{ (-1, 0), (-1, 1) };
 #ifdef ANALYSE
 	int movesConsidered;
 #endif
@@ -182,7 +183,7 @@ bool HEX::isAWin(Side s) const{
 	return false;
 }
 
-bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> pos) const
+bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 {
 	if (s == HUMAN && row == 2)
 	{
@@ -207,7 +208,7 @@ bool HEX::checkEdge(Side s) const {
 	bool side1 = false, side2 = false;
 	if (s = COMPUTER)
 	{
-		for (int i = 0; i <= 3; i++)
+		for (int i = 0; i <= 2; i++)
 		{
 			if (board(0, i) == s)
 			{
@@ -222,7 +223,7 @@ bool HEX::checkEdge(Side s) const {
 	}
 	else
 	{
-		for (int i = 0; i <= 3; i++)
+		for (int i = 0; i <= 2; i++)
 		{
 			if (board(i, 0) == s)
 			{
