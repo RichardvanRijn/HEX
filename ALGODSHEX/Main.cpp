@@ -4,8 +4,11 @@
 #include <set>
 #include <vector>
 #include <utility>
+#include <iterator>
+#include <iostream>
 using namespace std;
 #include "Matrix.h"
+
 
 // print number of moves considered and time used
 #define ANALYSE
@@ -37,6 +40,7 @@ public:
 	bool isAWin(Side s) const;
 	bool checkEdge(Side s) const;
 	bool checkPath(Side s, int x, int y, set<pair<int, int>> &pos) const;
+	void filVector();
 #ifdef ANALYSE
 	int getAndResetMovesConsidered() {
 		int i = movesConsidered;
@@ -48,9 +52,9 @@ private:
 	typedef matrix<Side, 3, 3> Board;
 	Board board;
 	Value value() const;
-
-	vector<pair<int, int>> location{ { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
-	//	vector<pair<int, int>> location { make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
+	vector<pair<int, int>> location;
+//	vector<pair<int, int>> location { { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
+//	vector<pair<int, int>> location { make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
 //	vector<pair<int, int>> location{ (-1, 0), (-1, 1) };
 #ifdef ANALYSE
 	int movesConsidered;
@@ -153,6 +157,11 @@ HEX::Side HEX::side(int row, int column) const {
 	return board(row, column);
 }
 
+void HEX::filVector()
+{
+	location = { { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
+}
+
 bool HEX::isUndecided() const {
 	return value() == UNDECIDED;
 }
@@ -176,9 +185,25 @@ bool HEX::isAWin(Side s) const{
 	{
 		return false;
 	}
-	if (checkPath(s, 0, 0, pos))
+	if (s == HUMAN)
 	{
-		return true;
+		for (int i = 0; i < 3; i++)
+		{
+			if (checkPath(s, i, 0, pos))
+			{
+				return true;
+			}
+		}
+	}
+	else if (s == COMPUTER)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			if (checkPath(s, 0, i, pos))
+			{
+				return true;
+			}
+		}
 	}
 	return false;
 }
@@ -196,9 +221,15 @@ bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 	pos.insert(make_pair(row, column));
 	for (int i = 0; i <= 2; i++)
 	{
-		if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
+		if (row + location[i].first > 0 && row + location[i].first < 3)
 		{
-			return true;
+			if (column + location[i].second > 0 && column + location[i].second < 3)
+			{
+				if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
+				{
+					return true;
+				}
+			}
 		}
 	}
 	return false;
@@ -219,7 +250,7 @@ bool HEX::checkEdge(Side s) const {
 				side2 = true;
 			}
 		}
-		return (side1 & side2);
+		return (side1 && side2);
 	}
 	else
 	{
@@ -234,12 +265,13 @@ bool HEX::checkEdge(Side s) const {
 				side2 = true;
 			}
 		}
-		return (side1 & side2);
+		return (side1 && side2);
 	}
 }
 
 ConsoleHEXGame::ConsoleHEXGame(bool computerGoesFirst) :
 computerSymbol(computerGoesFirst ? 'x' : 'o'), humanSymbol(computerGoesFirst ? 'o' : 'x') {
+	t.filVector();
 	if (computerGoesFirst) {
 		doComputerMove();
 		cout << endl;
@@ -302,7 +334,6 @@ void ConsoleHEXGame::play() {
 			doComputerMove();
 			cout << endl;
 		}
-//		system("cls");
 	} while (t.isUndecided());
 	printBoard();
 	if (t.isAWin(HEX::COMPUTER)) {
