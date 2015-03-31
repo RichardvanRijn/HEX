@@ -49,7 +49,7 @@ private:
 	Board board;
 	Value value() const;
 
-	vector<pair<int, int>> location{ (-1, 0) };
+	vector<pair<int, int>> location = { ;		//{ (-1, 0) };
 //	vector<pair<int, int>> location{ make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
 #ifdef ANALYSE
 	int movesConsidered;
@@ -171,10 +171,12 @@ bool HEX::boardIsFull() const {
 
 bool HEX::isAWin(Side s) const{
 	set<pair<int, int>> pos;
+	/* Kijk of we al aan de rand zitten */
 	if (!checkEdge(s))
 	{
 		return false;
 	}
+	/* Kijk of er een pad is naar de rand */
 	if (checkPath(s, 0, 0, pos))
 	{
 		return true;
@@ -186,18 +188,20 @@ bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> pos) const
 {
 	if (s == HUMAN && row == 2)
 	{
-		return true;
+		return true;		// Einde van het bord bereikt: mens heeft gewonnen
 	}
 	else if (s == COMPUTER && column == 2)
 	{
-		return true;
+		return true;		// Einde van het bord bereikt: computer heeft gewonnen
 	}
 	pos.insert(make_pair(row, column));
 	for (int i = 0; i <= 2; i++)
 	{
+		/* Als de "volgende" tegel van "mij"(Side s) is EN er is een pad naar het desbetreffende einde van het bord, is het spel gewonnen.
+			checkPath() wordt recursief aangeroepen om steeds een volgende/omliggende tegel te controleren (behalve de tegels die al gecontroleerd zijn) */
 		if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
 		{
-			return true;
+			return true;		// Huidige Side s heeft gewonnen
 		}
 	}
 	return false;
