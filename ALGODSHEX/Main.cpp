@@ -210,24 +210,27 @@ bool HEX::isAWin(Side s) const{
 
 bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 {
-	if (s == HUMAN && row == 2)
+	if (s == HUMAN && column == 2)
 	{
 		return true;
 	}
-	else if (s == COMPUTER && column == 2)
+	else if (s == COMPUTER && row == 2)
 	{
 		return true;
 	}
 	pos.insert(make_pair(row, column));
-	for (int i = 0; i <= 2; i++)
+	for (int i = 0; i <= 5; i++)
 	{
-		if (row + location[i].first > 0 && row + location[i].first < 3)
+		if (row + location[i].first >= 0 && row + location[i].first < 3)
 		{
-			if (column + location[i].second > 0 && column + location[i].second < 3)
+			if (column + location[i].second >= 0 && column + location[i].second < 3)
 			{
-				if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
+				if (pos.count(make_pair(row + location[i].first, column + location[i].second)) == NULL)
 				{
-					return true;
+					if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
+					{
+						return true;
+					}
 				}
 			}
 		}
@@ -237,7 +240,7 @@ bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 
 bool HEX::checkEdge(Side s) const {
 	bool side1 = false, side2 = false;
-	if (s = COMPUTER)
+	if (s == COMPUTER)
 	{
 		for (int i = 0; i <= 2; i++)
 		{
@@ -252,7 +255,7 @@ bool HEX::checkEdge(Side s) const {
 		}
 		return (side1 && side2);
 	}
-	else
+	else if (s == HUMAN)
 	{
 		for (int i = 0; i <= 2; i++)
 		{
