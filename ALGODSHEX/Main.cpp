@@ -49,7 +49,7 @@ private:
 	Board board;
 	Value value() const;
 
-	vector<pair<int, int>> location = { ;		//{ (-1, 0) };
+	vector<pair<int, int>> location = { { -1, 0 }, { 3, 4 } };
 //	vector<pair<int, int>> location{ make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
 #ifdef ANALYSE
 	int movesConsidered;
