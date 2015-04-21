@@ -9,6 +9,8 @@
 using namespace std;
 #include "Matrix.h"
 
+#include <wx\wx.h>
+
 
 // print number of moves considered and time used
 #define ANALYSE
