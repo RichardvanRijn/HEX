@@ -31,8 +31,8 @@ public:
 	{
 		fill(board.begin(), board.end(), EMPTY);
 	}
-	Value chooseComputerMove(int& bestRow, int& bestColumn);
-	Value chooseHumanMove(int& bestRow, int& bestColumn);
+	Value chooseComputerMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS);
+	Value chooseHumanMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS);
 	Side side(int row, int column) const;
 	bool isUndecided() const;
 	bool playMove(Side s, int row, int column);
@@ -102,54 +102,55 @@ HEX::Value HEX::value() const {
 	return isAWin(COMPUTER) ? COMPUTER_WINS : isAWin(HUMAN) ? HUMAN_WINS : boardIsFull() ? DRAW : UNDECIDED;
 }
 
-HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn) {
+HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, Value beta) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
 	Value bestValue = value();
 	if (bestValue == UNDECIDED) {
-		bestValue = HUMAN_WINS;
-		for (int row = 0; row < 3; ++row) {
-			for (int column = 0; column < 3; ++column) {
+		for (int row = 0; alpha < beta && row < 3; ++row) {
+			for (int column = 0; alpha < beta && column < 3; ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = COMPUTER;
 					int dummyRow, dummyColumn;
-					Value value = chooseHumanMove(dummyRow, dummyColumn);
+					Value value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta);
 					board(row, column) = EMPTY;
-					if (value > bestValue) {
-						bestValue = value;
+					if (value >= alpha) {
+
+						alpha = value;
 						bestRow = row;
 						bestColumn = column;
 					}
+					}
 				}
 			}
+		bestValue = alpha;
 		}
-	}
 	return bestValue;
-}
+	}
 
-HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn) {
+HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Value beta) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
 	Value bestValue = value();
 	if (bestValue == UNDECIDED) {
-		bestValue = COMPUTER_WINS;
-		for (int row = 0; row < 3; ++row) {
-			for (int column = 0; column < 3; ++column) {
+		for (int row = 0; alpha < beta && row < 3; ++row) {
+			for (int column = 0; alpha < beta && column < 3; ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = HUMAN;
 					int dummyRow, dummyColumn;
-					Value value = chooseComputerMove(dummyRow, dummyColumn);
+					Value value = chooseComputerMove(dummyRow, dummyColumn, alpha, beta);
 					board(row, column) = EMPTY;
-					if (value < bestValue) {
-						bestValue = value;
+					if (value <= beta) {
+						beta = value;
 						bestRow = row;
 						bestColumn = column;
 					}
 				}
 			}
 		}
+		bestValue = beta;
 	}
 	return bestValue;
 }
