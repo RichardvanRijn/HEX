@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include <set>
+#include <map>
 #include <vector>
 #include <utility>
 #include <iterator>
@@ -20,6 +21,12 @@ using namespace std;
 #endif    
 #endif
 
+// This solution only starts saves boards if DEPTH >= 3 and DEPTH <= MAX_DEPTH
+// For DEPTH < 3 no transpositions can be found
+// For DEPTH > MAX_DEPTH calculation is faster than lookup 
+
+const int MAX_DEPTH = 3;
+
 class HEX {
 public:
 	enum Side { EMPTY, HUMAN, COMPUTER };
@@ -31,8 +38,8 @@ public:
 	{
 		fill(board.begin(), board.end(), EMPTY);
 	}
-	Value chooseComputerMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS);
-	Value chooseHumanMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS);
+	Value chooseComputerMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS, int depth = 1);
+	Value chooseHumanMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS, int depth = 1);
 	Side side(int row, int column) const;
 	bool isUndecided() const;
 	bool playMove(Side s, int row, int column);
@@ -41,22 +48,41 @@ public:
 	bool checkEdge(Side s) const;
 	bool checkPath(Side s, int x, int y, set<pair<int, int>> &pos) const;
 	void filVector();
+	int numCols() const;
+	int numRows() const;
 #ifdef ANALYSE
 	int getAndResetMovesConsidered() {
 		int i = movesConsidered;
 		movesConsidered = 0;
 		return i;
 	}
+	int getMapSize() const {
+		return boards.size();
+	}
 #endif
 private:
 	typedef matrix<Side, 3, 3> Board;
 	Board board;
 	Value value() const;
-
 	vector<pair<int, int>> location;
-//	vector<pair<int, int>> location { { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 } };
-//	vector<pair<int, int>> location { make_pair(-1, 0), make_pair(-1, 1), make_pair(0, 1), make_pair(1, 0), make_pair(1, -1), make_pair(0, -1) };
-//	vector<pair<int, int>> location{ (-1, 0), (-1, 1) };
+	class BoardWrapper {
+	public:
+		BoardWrapper(const Board& b) : board(b) {
+		}
+		bool operator<(const BoardWrapper& rhs) const;
+	private:
+		Board board;
+	};
+	class ValueAndBestMove {
+	public:
+		ValueAndBestMove() = default;
+		ValueAndBestMove(Value v, int r, int c) : value(v), bestRow(r), bestColumn(c) {
+		}
+		Value value;
+		int bestRow;
+		int bestColumn;
+	};
+	map<BoardWrapper, ValueAndBestMove> boards;
 #ifdef ANALYSE
 	int movesConsidered;
 #endif
@@ -102,18 +128,27 @@ HEX::Value HEX::value() const {
 	return isAWin(COMPUTER) ? COMPUTER_WINS : isAWin(HUMAN) ? HUMAN_WINS : boardIsFull() ? DRAW : UNDECIDED;
 }
 
-HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, Value beta) {
+HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, Value beta, int depth) {
 #ifdef ANALYSE
 	++movesConsidered;
+	cout << depth << endl;
 #endif
+	if (depth >= 3 && depth <= MAX_DEPTH) {
+		auto itr = boards.find(BoardWrapper(board));
+		if (itr != boards.end()) {
+			bestRow = itr->second.bestRow;
+			bestColumn = itr->second.bestColumn;
+			return itr->second.value;
+		}
+	}
 	Value bestValue = value();
 	if (bestValue == UNDECIDED) {
-		for (int row = 0; alpha < beta && row < 3; ++row) {
-			for (int column = 0; alpha < beta && column < 3; ++column) {
+		for (int row = 0; alpha < beta && row < board.numRows(); ++row) {
+			for (int column = 0; alpha < beta && column < board.numCols(); ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = COMPUTER;
 					int dummyRow, dummyColumn;
-					Value value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta);
+					Value value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
 					board(row, column) = EMPTY;
 					if (value >= alpha) {
 
@@ -125,22 +160,33 @@ HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, V
 				}
 			}
 		bestValue = alpha;
-		}
-	return bestValue;
 	}
+	if (depth >= 3 && depth <= MAX_DEPTH) {
+		boards[BoardWrapper(board)] = ValueAndBestMove(bestValue, bestRow, bestColumn);
+	}
+	return bestValue;
+}
 
-HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Value beta) {
+HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Value beta, int depth) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
+	if (depth >= 3 && depth <= MAX_DEPTH) {
+		auto itr = boards.find(BoardWrapper(board));
+		if (itr != boards.end()) {
+			bestRow = itr->second.bestRow;
+			bestColumn = itr->second.bestColumn;
+			return itr->second.value;
+		}
+	}
 	Value bestValue = value();
 	if (bestValue == UNDECIDED) {
-		for (int row = 0; alpha < beta && row < 3; ++row) {
-			for (int column = 0; alpha < beta && column < 3; ++column) {
+		for (int row = 0; alpha < beta && row < board.numRows(); ++row) {
+			for (int column = 0; alpha < beta && column < board.numCols(); ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = HUMAN;
 					int dummyRow, dummyColumn;
-					Value value = chooseComputerMove(dummyRow, dummyColumn, alpha, beta);
+					Value value = chooseComputerMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
 					board(row, column) = EMPTY;
 					if (value <= beta) {
 						beta = value;
@@ -151,6 +197,9 @@ HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Valu
 			}
 		}
 		bestValue = beta;
+	}
+	if (depth >= 3 && depth <= MAX_DEPTH) {
+		boards[BoardWrapper(board)] = ValueAndBestMove(bestValue, bestRow, bestColumn);
 	}
 	return bestValue;
 }
@@ -169,7 +218,7 @@ bool HEX::isUndecided() const {
 }
 
 bool HEX::playMove(Side s, int row, int column) {
-	if (row < 0 || row >= 3 || column < 0 || column >= 3 || board(row, column) != EMPTY)
+	if (row < 0 || row >= board.numRows() || column < 0 || column >= board.numCols() || board(row, column) != EMPTY)
 		return false;
 	board(row, column) = s;
 	return true;
@@ -190,7 +239,7 @@ bool HEX::isAWin(Side s) const{
 	}
 	if (s == HUMAN)
 	{
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < board.numCols(); i++)
 		{
 			if (board(i, 0) == s)
 			{
@@ -203,7 +252,7 @@ bool HEX::isAWin(Side s) const{
 	}
 	else if (s == COMPUTER)
 	{
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < board.numRows(); i++)
 		{
 			if (board(0, i) == s)
 			{
@@ -219,26 +268,29 @@ bool HEX::isAWin(Side s) const{
 
 bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 {
-	if (s == HUMAN && column == 2)
+	if (s == HUMAN && column == (board.numCols() - 1))
 	{
 		return true;		// Einde van het bord bereikt: mens heeft gewonnen
 	}
-	else if (s == COMPUTER && row == 2)
+	else if (s == COMPUTER && row == (board.numRows() - 1))
 	{
 		return true;		// Einde van het bord bereikt: computer heeft gewonnen
 	}
 	pos.insert(make_pair(row, column));
 	for (int i = 0; i <= 5; i++)
 	{
-		if (row + location[i].first >= 0 && row + location[i].first < 3)
+		if (row + location[i].first >= 0 && row + location[i].first < board.numRows())
 		{
-			if (column + location[i].second >= 0 && column + location[i].second < 3)
+			if (column + location[i].second >= 0 && column + location[i].second < board.numCols())
 			{
-				if (pos.count(make_pair(row + location[i].first, column + location[i].second)) == EMPTY)
+				if (pos.count(make_pair(row + location[i].first, column + location[i].second)) == NULL)
 				{
-					if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
+					if (board(row + location[i].first, column + location[i].second) == s)
 					{
-						return true;
+						if (checkPath(s, row + location[i].first, column + location[i].second, pos))
+						{
+							return true;
+						}
 					}
 				}
 			}
@@ -251,13 +303,13 @@ bool HEX::checkEdge(Side s) const {
 	bool side1 = false, side2 = false;
 	if (s == COMPUTER)
 	{
-		for (int i = 0; i <= 2; i++)
+		for (int i = 0; i < board.numCols(); i++)
 		{
 			if (board(0, i) == s)
 			{
 				side1 = true;
 			}
-			if (board(2, i) == s)
+			if (board((board.numCols() - 1), i) == s)
 			{
 				side2 = true;
 			}
@@ -266,19 +318,40 @@ bool HEX::checkEdge(Side s) const {
 	}
 	else if (s == HUMAN)
 	{
-		for (int i = 0; i <= 2; i++)
+		for (int i = 0; i < board.numRows(); i++)
 		{
 			if (board(i, 0) == s)
 			{
 				side1 = true;
 			}
-			if (board(i, 2) == s)
+			if (board(i, (board.numRows() - 1)) == s)
 			{
 				side2 = true;
 			}
 		}
 		return (side1 && side2);
 	}
+}
+
+int HEX::numCols() const
+{
+	return board.numCols();
+}
+
+int HEX::numRows() const
+{
+	return board.numRows();
+}
+
+bool HEX::BoardWrapper::operator<(const BoardWrapper& rhs) const {
+	for (int i = 0; i < board.numRows(); ++i) {
+		for (int j = 0; j < board.numCols(); ++j) {
+			if (board(i, j) != rhs.board(i, j)) {
+				return board(i, j) < rhs.board(i, j);
+			}
+		}
+	}
+	return false;
 }
 
 ConsoleHEXGame::ConsoleHEXGame(bool computerGoesFirst) :
@@ -291,15 +364,15 @@ computerSymbol(computerGoesFirst ? 'x' : 'o'), humanSymbol(computerGoesFirst ? '
 }
 
 void ConsoleHEXGame::printBoard() const {
-	string streep(6, '-');
+	string streep(t.numCols()*2, '-');
 	cout << streep << endl;
-	for (int row = 0; row < 3; ++row) {
+	for (int row = 0; row < t.numRows(); ++row) {
 		for (int i = 0; i < row; i++)
 		{
 			cout << " ";
 		}
 		cout << "\\";
-		for (int column = 0; column < 3; ++column)
+		for (int column = 0; column < t.numCols(); ++column)
 		{
 			if (column != 0)
 			cout << "|";
