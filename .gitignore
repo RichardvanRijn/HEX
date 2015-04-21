@@ -13,6 +13,7 @@ $RECYCLE.BIN/
 *.msi
 *.msm
 *.msp
+*.sdf
 
 # Windows shortcuts
 *.lnk
@@ -44,3 +45,6 @@ Temporary Items
 
 Debug/
 
+*.sdf
+*.v12.suo
+ALGODSHEX.v12.suo
