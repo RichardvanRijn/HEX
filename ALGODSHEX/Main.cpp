@@ -189,9 +189,12 @@ bool HEX::isAWin(Side s) const{
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			if (checkPath(s, i, 0, pos))
+			if (board(i, 0) == s)
 			{
-				return true;
+				if (checkPath(s, i, 0, pos))
+				{
+					return true;
+				}
 			}
 		}
 	}
@@ -199,9 +202,12 @@ bool HEX::isAWin(Side s) const{
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			if (checkPath(s, 0, i, pos))
+			if (board(0, i) == s)
 			{
-				return true;
+				if (checkPath(s, 0, i, pos))
+				{
+					return true;
+				}
 			}
 		}
 	}
@@ -225,7 +231,7 @@ bool HEX::checkPath(Side s, int row, int column, set<pair<int, int>> &pos) const
 		{
 			if (column + location[i].second >= 0 && column + location[i].second < 3)
 			{
-				if (pos.count(make_pair(row + location[i].first, column + location[i].second)) == NULL)
+				if (pos.count(make_pair(row + location[i].first, column + location[i].second)) == EMPTY)
 				{
 					if (board(row + location[i].first, column + location[i].second) == s && checkPath(s, row + location[i].first, column + location[i].second, pos))
 					{
