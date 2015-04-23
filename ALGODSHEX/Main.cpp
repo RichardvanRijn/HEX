@@ -10,7 +10,7 @@
 using namespace std;
 #include "Matrix.h"
 
-#include <wx\wx.h>
+//#include <wx\wx.h>
 
 
 // print number of moves considered and time used
@@ -27,7 +27,8 @@ using namespace std;
 // For DEPTH < 3 no transpositions can be found
 // For DEPTH > MAX_DEPTH calculation is faster than lookup 
 
-const int MAX_DEPTH = 3;
+const int MAX_DEPTH = 16;
+const int MIN_DEPTH = 3;
 
 class HEX {
 public:
@@ -133,9 +134,8 @@ HEX::Value HEX::value() const {
 HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, Value beta, int depth) {
 #ifdef ANALYSE
 	++movesConsidered;
-	cout << depth << endl;
 #endif
-	if (depth >= 3 && depth <= MAX_DEPTH) {
+	if (depth >= MIN_DEPTH && depth <= MAX_DEPTH) {
 		auto itr = boards.find(BoardWrapper(board));
 		if (itr != boards.end()) {
 			bestRow = itr->second.bestRow;
@@ -153,17 +153,16 @@ HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, V
 					Value value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
 					board(row, column) = EMPTY;
 					if (value >= alpha) {
-
 						alpha = value;
 						bestRow = row;
 						bestColumn = column;
 					}
-					}
 				}
 			}
+		}
 		bestValue = alpha;
 	}
-	if (depth >= 3 && depth <= MAX_DEPTH) {
+	if (depth >= MIN_DEPTH && depth <= MAX_DEPTH) {
 		boards[BoardWrapper(board)] = ValueAndBestMove(bestValue, bestRow, bestColumn);
 	}
 	return bestValue;
@@ -173,7 +172,7 @@ HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Valu
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
-	if (depth >= 3 && depth <= MAX_DEPTH) {
+	if (depth >= MIN_DEPTH && depth <= MAX_DEPTH) {
 		auto itr = boards.find(BoardWrapper(board));
 		if (itr != boards.end()) {
 			bestRow = itr->second.bestRow;
@@ -200,7 +199,7 @@ HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Valu
 		}
 		bestValue = beta;
 	}
-	if (depth >= 3 && depth <= MAX_DEPTH) {
+	if (depth >= MIN_DEPTH && depth <= MAX_DEPTH) {
 		boards[BoardWrapper(board)] = ValueAndBestMove(bestValue, bestRow, bestColumn);
 	}
 	return bestValue;
@@ -387,7 +386,11 @@ void ConsoleHEXGame::printBoard() const {
 		}
 		cout << "\\" << endl;
 	}
-	cout << "   " << streep << endl;
+	for (int i = 0; i < t.numCols(); i++)
+	{
+		cout << " ";
+	}
+	cout << streep << endl;
 }
 
 void ConsoleHEXGame::doComputerMove() {
