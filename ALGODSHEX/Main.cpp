@@ -23,6 +23,12 @@ using namespace std;
 #endif    
 #endif
 
+#define boardSize 4
+
+#define UNDECIDED -2
+#define HUMAN_WINS -1
+#define COMPUTER_WINS 26
+
 // This solution only starts saves boards if DEPTH >= 3 and DEPTH <= MAX_DEPTH
 // For DEPTH < 3 no transpositions can be found
 // For DEPTH > MAX_DEPTH calculation is faster than lookup 
@@ -30,10 +36,12 @@ using namespace std;
 const int MAX_DEPTH = 16;
 const int MIN_DEPTH = 3;
 
+const int MAX_SEARCH_DEPTH = 50;
+
 class HEX {
 public:
 	enum Side { EMPTY, HUMAN, COMPUTER };
-	enum Value { HUMAN_WINS = -1, DRAW, COMPUTER_WINS, UNDECIDED };
+//	enum Value { HUMAN_WINS = -1, DRAW, COMPUTER_WINS, UNDECIDED };
 	HEX()
 #ifdef ANALYSE
 		: movesConsidered(0)
@@ -41,8 +49,8 @@ public:
 	{
 		fill(board.begin(), board.end(), EMPTY);
 	}
-	Value chooseComputerMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS, int depth = 1);
-	Value chooseHumanMove(int& bestRow, int& bestColumn, Value alpha = HUMAN_WINS, Value beta = COMPUTER_WINS, int depth = 1);
+	int chooseComputerMove(int& bestRow, int& bestColumn, int alpha = HUMAN_WINS, int beta = COMPUTER_WINS, int depth = 1);
+	int chooseHumanMove(int& bestRow, int& bestColumn, int alpha = HUMAN_WINS, int beta = COMPUTER_WINS, int depth = 1);
 	Side side(int row, int column) const;
 	bool isUndecided() const;
 	bool playMove(Side s, int row, int column);
@@ -64,9 +72,9 @@ public:
 	}
 #endif
 private:
-	typedef matrix<Side, 3, 3> Board;
+	typedef matrix<Side, boardSize, boardSize> Board;
 	Board board;
-	Value value() const;
+	int value(int depth) const;
 	vector<pair<int, int>> location;
 	class BoardWrapper {
 	public:
@@ -79,9 +87,9 @@ private:
 	class ValueAndBestMove {
 	public:
 		ValueAndBestMove() = default;
-		ValueAndBestMove(Value v, int r, int c) : value(v), bestRow(r), bestColumn(c) {
+		ValueAndBestMove(int v, int r, int c) : value(v), bestRow(r), bestColumn(c) {
 		}
-		Value value;
+		int value;
 		int bestRow;
 		int bestColumn;
 	};
@@ -127,11 +135,14 @@ private:
 ostream& operator<<(ostream& o, const StopWatch& sw);
 #endif
 
-HEX::Value HEX::value() const {
-	return isAWin(COMPUTER) ? COMPUTER_WINS : isAWin(HUMAN) ? HUMAN_WINS : boardIsFull() ? DRAW : UNDECIDED;
+int HEX::value(int depth) const {
+	if (depth <= MAX_SEARCH_DEPTH)
+		return isAWin(COMPUTER) ? COMPUTER_WINS : isAWin(HUMAN) ? HUMAN_WINS : UNDECIDED;
+	else
+		return NULL;
 }
 
-HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, Value beta, int depth) {
+int HEX::chooseComputerMove(int& bestRow, int& bestColumn, int alpha, int beta, int depth) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
@@ -143,14 +154,14 @@ HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, V
 			return itr->second.value;
 		}
 	}
-	Value bestValue = value();
+	int bestValue = value(depth);
 	if (bestValue == UNDECIDED) {
 		for (int row = 0; alpha < beta && row < board.numRows(); ++row) {
 			for (int column = 0; alpha < beta && column < board.numCols(); ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = COMPUTER;
 					int dummyRow, dummyColumn;
-					Value value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
+					int value = chooseHumanMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
 					board(row, column) = EMPTY;
 					if (value >= alpha) {
 						alpha = value;
@@ -168,7 +179,7 @@ HEX::Value HEX::chooseComputerMove(int& bestRow, int& bestColumn, Value alpha, V
 	return bestValue;
 }
 
-HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Value beta, int depth) {
+int HEX::chooseHumanMove(int& bestRow, int& bestColumn, int alpha, int beta, int depth) {
 #ifdef ANALYSE
 	++movesConsidered;
 #endif
@@ -180,14 +191,14 @@ HEX::Value HEX::chooseHumanMove(int& bestRow, int& bestColumn, Value alpha, Valu
 			return itr->second.value;
 		}
 	}
-	Value bestValue = value();
+	int bestValue = value(depth);
 	if (bestValue == UNDECIDED) {
 		for (int row = 0; alpha < beta && row < board.numRows(); ++row) {
 			for (int column = 0; alpha < beta && column < board.numCols(); ++column) {
 				if (board(row, column) == EMPTY) {
 					board(row, column) = HUMAN;
 					int dummyRow, dummyColumn;
-					Value value = chooseComputerMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
+					int value = chooseComputerMove(dummyRow, dummyColumn, alpha, beta, (depth + 1));
 					board(row, column) = EMPTY;
 					if (value <= beta) {
 						beta = value;
@@ -215,7 +226,7 @@ void HEX::filVector()
 }
 
 bool HEX::isUndecided() const {
-	return value() == UNDECIDED;
+	return value(0) == UNDECIDED;
 }
 
 bool HEX::playMove(Side s, int row, int column) {
@@ -233,7 +244,7 @@ bool HEX::boardIsFull() const {
 
 bool HEX::isAWin(Side s) const{
 	set<pair<int, int>> pos;
-	/* Kijk of we al aan de rand zitten */
+	/* Check if the edge is reached */
 	if (!checkEdge(s))
 	{
 		return false;
@@ -356,7 +367,7 @@ bool HEX::BoardWrapper::operator<(const BoardWrapper& rhs) const {
 }
 
 ConsoleHEXGame::ConsoleHEXGame(bool computerGoesFirst) :
-computerSymbol(computerGoesFirst ? 'x' : 'o'), humanSymbol(computerGoesFirst ? 'o' : 'x') {
+	computerSymbol(computerGoesFirst ? 'x' : 'o'), humanSymbol(computerGoesFirst ? 'o' : 'x') {
 	t.filVector();
 	if (computerGoesFirst) {
 		doComputerMove();
@@ -376,7 +387,7 @@ void ConsoleHEXGame::printBoard() const {
 		for (int column = 0; column < t.numCols(); ++column)
 		{
 			if (column != 0)
-			cout << "|";
+				cout << "|";
 			if (t.side(row, column) == HEX::COMPUTER)
 				cout << computerSymbol;
 			else if (t.side(row, column) == HEX::HUMAN)
